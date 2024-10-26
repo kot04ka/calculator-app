@@ -1,20 +1,34 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+// App.js
+
+import * as React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+
+import HomeScreen from './screens/HomeScreen';
+import StandardCalculator from './screens/StandardCalculator';
+import CurrencyConverter from './screens/CurrencyConverter';
+import UnitConverter from './screens/UnitConverter';
+
+const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="Домашня сторінка">
+        <Stack.Screen name="Домашня сторінка" component={HomeScreen} />
+        <Stack.Screen
+          name="Стандартний калькулятор"
+          component={StandardCalculator}
+        />
+        <Stack.Screen
+          name="Конвертер валют"
+          component={CurrencyConverter}
+        />
+        <Stack.Screen
+          name="Конвертер одиниць"
+          component={UnitConverter}
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

@@ -1,49 +1,42 @@
-// screens/UnitConverter.js
-
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import { useQuery } from '@tanstack/react-query';
+
+// Функція для отримання даних із API
+const fetchUnitConversions = async () => {
+  const response = await fetch('https://my-json-server.typicode.com/kot04ka/calculator-api/unitConversions');
+  if (!response.ok) {
+    throw new Error('Failed to fetch unit conversions');
+  }
+  return response.json();
+};
 
 export default function UnitConverter({ navigation }) {
   const [unitType, setUnitType] = useState('length');
-  const [fromUnit, setFromUnit] = useState('km');
-  const [toUnit, setToUnit] = useState('mi');
+  const [fromUnit, setFromUnit] = useState('');
+  const [toUnit, setToUnit] = useState('');
   const [value, setValue] = useState('');
   const [result, setResult] = useState(null);
 
-  const units = {
-    length: {
-      units: ['km', 'mi', 'm'],
-      conversions: {
-        km: { km: 1, mi: 0.621371, m: 1000 },
-        mi: { km: 1.60934, mi: 1, m: 1609.34 },
-        m: { km: 0.001, mi: 0.000621371, m: 1 },
-      },
-    },
-    weight: {
-      units: ['kg', 'lb', 'g'],
-      conversions: {
-        kg: { kg: 1, lb: 2.20462, g: 1000 },
-        lb: { kg: 0.453592, lb: 1, g: 453.592 },
-        g: { kg: 0.001, lb: 0.00220462, g: 1 },
-      },
-    },
-    temperature: {
-      units: ['C', 'F'],
-      conversions: {
-        C: {
-          C: (val) => val,
-          F: (val) => (val * 9) / 5 + 32,
-        },
-        F: {
-          C: (val) => ((val - 32) * 5) / 9,
-          F: (val) => val,
-        },
-      },
-    },
-  };
+  // Використання useQuery для отримання даних
+  const { data: unitData, isLoading, error } = useQuery({
+    queryKey: ['unitConversions'], // Ключ для кешування
+    queryFn: fetchUnitConversions, // Функція для виконання запиту
+  });
 
+  // Оновлення доступних одиниць при зміні типу
+  useEffect(() => {
+    if (unitData && unitData[unitType]) {
+      setFromUnit(unitData[unitType].units[0]);
+      setToUnit(unitData[unitType].units[1]);
+    }
+  }, [unitType, unitData]);
+
+  // Обробка конвертації одиниць
   const handleConversion = () => {
+    if (!unitData || !unitData[unitType]) return;
+
     const val = parseFloat(value);
 
     if (isNaN(val)) {
@@ -52,18 +45,30 @@ export default function UnitConverter({ navigation }) {
     }
 
     let convertedValue;
-
-    if (unitType === 'temperature') {
-      const conversionFunc = units[unitType].conversions[fromUnit][toUnit];
-      convertedValue = conversionFunc(val).toFixed(2);
-    } else {
-      const rate = units[unitType].conversions[fromUnit][toUnit];
-      convertedValue = (val * rate).toFixed(2);
-    }
+    const rate = unitData[unitType].conversions[fromUnit][toUnit];
+    convertedValue = (val * rate).toFixed(2);
 
     setResult(convertedValue);
   };
 
+  // Обробка стану завантаження та помилок
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <Text>Завантаження даних...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text>Помилка завантаження: {error.message}</Text>
+      </View>
+    );
+  }
+
+  // Основний рендер компоненту
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Конвертер одиниць</Text>
@@ -72,15 +77,12 @@ export default function UnitConverter({ navigation }) {
         <Picker
           selectedValue={unitType}
           style={styles.picker}
-          onValueChange={(itemValue) => {
-            setUnitType(itemValue);
-            setFromUnit(units[itemValue].units[0]);
-            setToUnit(units[itemValue].units[1]);
-          }}
+          onValueChange={(itemValue) => setUnitType(itemValue)}
         >
-          <Picker.Item label="Довжина" value="length" />
-          <Picker.Item label="Вага" value="weight" />
-          <Picker.Item label="Температура" value="temperature" />
+          {unitData &&
+            Object.keys(unitData).map((type) => (
+              <Picker.Item label={type} value={type} key={type} />
+            ))}
         </Picker>
       </View>
       <TextInput
@@ -97,9 +99,10 @@ export default function UnitConverter({ navigation }) {
           style={styles.picker}
           onValueChange={(itemValue) => setFromUnit(itemValue)}
         >
-          {units[unitType].units.map((unit) => (
-            <Picker.Item label={unit} value={unit} key={unit} />
-          ))}
+          {unitData &&
+            unitData[unitType]?.units.map((unit) => (
+              <Picker.Item label={unit} value={unit} key={unit} />
+            ))}
         </Picker>
       </View>
       <View style={styles.pickerContainer}>
@@ -109,9 +112,10 @@ export default function UnitConverter({ navigation }) {
           style={styles.picker}
           onValueChange={(itemValue) => setToUnit(itemValue)}
         >
-          {units[unitType].units.map((unit) => (
-            <Picker.Item label={unit} value={unit} key={unit} />
-          ))}
+          {unitData &&
+            unitData[unitType]?.units.map((unit) => (
+              <Picker.Item label={unit} value={unit} key={unit} />
+            ))}
         </Picker>
       </View>
       <TouchableOpacity style={styles.convertButton} onPress={handleConversion}>
@@ -124,7 +128,7 @@ export default function UnitConverter({ navigation }) {
       )}
       <TouchableOpacity
         style={styles.homeButton}
-        onPress={() => navigation.navigate('Домашня сторінка')}
+        onPress={() => navigation.navigate('Home')}
       >
         <Text style={styles.homeButtonText}>Повернутися на домашню сторінку</Text>
       </TouchableOpacity>
@@ -133,7 +137,6 @@ export default function UnitConverter({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  // Стили аналогічні попереднім
   container: {
     flex: 1,
     padding: 20,

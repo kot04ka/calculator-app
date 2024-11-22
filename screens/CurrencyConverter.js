@@ -1,8 +1,16 @@
-// screens/CurrencyConverter.js
-
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import { useQuery } from '@tanstack/react-query';
+
+// Функція для отримання курсів валют із API
+const fetchExchangeRates = async () => {
+  const response = await fetch('https://my-json-server.typicode.com/kot04ka/calculator-api/exchangeRates');
+  if (!response.ok) {
+    throw new Error('Не вдалося завантажити курси валют');
+  }
+  return response.json();
+};
 
 export default function CurrencyConverter({ navigation }) {
   const [amount, setAmount] = useState('');
@@ -10,16 +18,22 @@ export default function CurrencyConverter({ navigation }) {
   const [toCurrency, setToCurrency] = useState('EUR');
   const [result, setResult] = useState(null);
 
-  const exchangeRates = {
-    USD: { USD: 1, EUR: 0.85, UAH: 27.5, GBP: 0.75 },
-    EUR: { USD: 1.18, EUR: 1, UAH: 32.3, GBP: 0.88 },
-    UAH: { USD: 0.036, EUR: 0.031, UAH: 1, GBP: 0.027 },
-    GBP: { USD: 1.33, EUR: 1.14, UAH: 36.6, GBP: 1 },
-  };
+  // Використання useQuery для отримання даних
+  const { data: exchangeRates, isLoading, error } = useQuery({
+    queryKey: ['exchangeRates'],
+    queryFn: fetchExchangeRates,
+  });
 
-  const currencies = Object.keys(exchangeRates);
+  // Формуємо список доступних валют
+  const currencies = useMemo(
+    () => (exchangeRates ? Object.keys(exchangeRates) : []),
+    [exchangeRates]
+  );
 
+  // Обробка конвертації валют
   const handleConversion = () => {
+    if (!exchangeRates) return;
+
     const rate = exchangeRates[fromCurrency][toCurrency];
     const convertedAmount = parseFloat(amount) * rate;
 
@@ -31,6 +45,24 @@ export default function CurrencyConverter({ navigation }) {
     setResult(convertedAmount.toFixed(2));
   };
 
+  // Відображення стану завантаження або помилок
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <Text>Завантаження даних...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text>Помилка завантаження: {error.message}</Text>
+      </View>
+    );
+  }
+
+  // Основний рендер компоненту
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Конвертер валют</Text>
@@ -75,7 +107,7 @@ export default function CurrencyConverter({ navigation }) {
       )}
       <TouchableOpacity
         style={styles.homeButton}
-        onPress={() => navigation.navigate('Домашня сторінка')}
+        onPress={() => navigation.navigate('Home')}
       >
         <Text style={styles.homeButtonText}>Повернутися на домашню сторінку</Text>
       </TouchableOpacity>
@@ -84,7 +116,6 @@ export default function CurrencyConverter({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  // Стили аналогічні попереднім, додамо стилі для Picker та кнопки конвертації
   container: {
     flex: 1,
     padding: 20,

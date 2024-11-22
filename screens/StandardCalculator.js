@@ -1,47 +1,55 @@
 // screens/StandardCalculator.js
 
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
 
 export default function StandardCalculator({ navigation }) {
   const [firstNumber, setFirstNumber] = useState('');
   const [secondNumber, setSecondNumber] = useState('');
   const [result, setResult] = useState(null);
 
-  const handleCalculation = (operation) => {
-    const num1 = parseFloat(firstNumber);
-    const num2 = parseFloat(secondNumber);
+  const handleCalculation = useCallback(
+    (operation) => {
+      const num1 = parseFloat(firstNumber);
+      const num2 = parseFloat(secondNumber);
 
-    if (isNaN(num1) || isNaN(num2)) {
-      alert('Будь ласка, введіть коректні числа.');
-      return;
-    }
-
-    let res = 0;
-
-    switch (operation) {
-      case '+':
-        res = num1 + num2;
-        break;
-      case '-':
-        res = num1 - num2;
-        break;
-      case '*':
-        res = num1 * num2;
-        break;
-      case '/':
-        if (num2 === 0) {
-          alert('Ділення на нуль неможливе.');
-          return;
-        }
-        res = num1 / num2;
-        break;
-      default:
+      if (isNaN(num1) || isNaN(num2)) {
+        alert('Будь ласка, введіть коректні числа.');
         return;
-    }
+      }
 
-    setResult(res);
-  };
+      let res = 0;
+      switch (operation) {
+        case '+':
+          res = num1 + num2;
+          break;
+        case '-':
+          res = num1 - num2;
+          break;
+        case '*':
+          res = num1 * num2;
+          break;
+        case '/':
+          if (num2 === 0) {
+            alert('Ділення на нуль неможливе.');
+            return;
+          }
+          res = num1 / num2;
+          break;
+        default:
+          return;
+      }
+
+      setResult(res);
+    },
+    [firstNumber, secondNumber]
+  );
+
+  useEffect(() => {
+    if (result !== null) {
+      console.log(`Результат: ${result}`);
+    }
+  }, [result]);
 
   return (
     <View style={styles.container}>
@@ -61,38 +69,18 @@ export default function StandardCalculator({ navigation }) {
         onChangeText={setSecondNumber}
       />
       <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={styles.calcButton}
-          onPress={() => handleCalculation('+')}
-        >
-          <Text style={styles.buttonText}>+</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.calcButton}
-          onPress={() => handleCalculation('-')}
-        >
-          <Text style={styles.buttonText}>-</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.calcButton}
-          onPress={() => handleCalculation('*')}
-        >
-          <Text style={styles.buttonText}>×</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.calcButton}
-          onPress={() => handleCalculation('/')}
-        >
-          <Text style={styles.buttonText}>÷</Text>
-        </TouchableOpacity>
+        {['+', '-', '*', '/'].map((op) => (
+          <TouchableOpacity
+            key={op}
+            style={styles.calcButton}
+            onPress={() => handleCalculation(op)}
+          >
+            <Text style={styles.buttonText}>{op}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
-      {result !== null && (
-        <Text style={styles.result}>Результат: {result}</Text>
-      )}
-      <TouchableOpacity
-        style={styles.homeButton}
-        onPress={() => navigation.navigate('Домашня сторінка')}
-      >
+      {result !== null && <Text style={styles.result}>Результат: {result}</Text>}
+      <TouchableOpacity style={styles.homeButton} onPress={() => navigation.navigate('Home')}>
         <Text style={styles.homeButtonText}>Повернутися на домашню сторінку</Text>
       </TouchableOpacity>
     </View>
